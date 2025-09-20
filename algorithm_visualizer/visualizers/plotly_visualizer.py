@@ -21,37 +21,62 @@ class PlotlyVisualizer:
         self.height = height
         
     def visualize_steps(self, steps: List[AlgorithmStep], data: List[Number], 
-                       title: str = "Algorithm Visualization") -> None:
+                       title: str = "Algorithm Visualization") -> Optional[go.Figure]:
         """Create static visualization of algorithm steps.
         
         Args:
             steps: List of algorithm steps
             data: Original data
             title: Title for the visualization
+            
+        Returns:
+            Plotly Figure object for Streamlit display, or None if error
         """
         if not steps:
             print("No steps to visualize")
-            return
+            return None
             
-        # Select key steps to display
-        num_steps = min(len(steps), 6)
-        step_indices = self._select_key_steps(steps, num_steps)
+        # Show all steps up to 100, then truncate
+        total_steps = len(steps)
+        max_steps = 100
+        is_truncated = total_steps > max_steps
         
-        # Create subplots
-        cols = 3
+        if is_truncated:
+            # Show first 100 steps
+            steps_to_show = steps[:max_steps]
+            step_indices = list(range(max_steps))
+            num_steps = max_steps
+        else:
+            # Show all steps
+            steps_to_show = steps
+            step_indices = list(range(total_steps))
+            num_steps = total_steps
+        
+        # Calculate optimal grid layout
+        cols = min(4, num_steps)  # Max 4 columns
         rows = (num_steps + cols - 1) // cols
         
+        # Adjust spacing based on number of rows to prevent plotly errors
+        if rows > 10:
+            vertical_spacing = max(0.02, 1.0 / (rows * 2))  # Smaller spacing for many rows
+            horizontal_spacing = 0.02
+        else:
+            vertical_spacing = 0.08
+            horizontal_spacing = 0.05
+        
+        # Create subplots
         fig = make_subplots(
             rows=rows, cols=cols,
-            subplot_titles=[f"Step {i+1}: {steps[i].description}" 
+            subplot_titles=[f"Step {i+1}: {steps_to_show[i].description[:40]}{'...' if len(steps_to_show[i].description) > 40 else ''}" 
                           for i in step_indices],
-            vertical_spacing=0.1
+            vertical_spacing=vertical_spacing,
+            horizontal_spacing=horizontal_spacing
         )
         
         for idx, step_idx in enumerate(step_indices):
             row = idx // cols + 1
             col = idx % cols + 1
-            step = steps[step_idx]
+            step = steps_to_show[step_idx]
             
             # Create bar chart for this step
             colors = ['red' if i in step.highlighted_indices else 'lightblue' 
@@ -69,14 +94,19 @@ class PlotlyVisualizer:
                 row=row, col=col
             )
         
+        # Create title with truncation info
+        title_text = f"{title} - {num_steps} of {total_steps} steps"
+        if is_truncated:
+            title_text += " (truncated - showing first 100)"
+        
         fig.update_layout(
-            title=title,
-            height=self.height,
-            width=self.width,
+            title=title_text,
+            height=max(self.height, rows * 200),  # Adjust height based on rows
+            width=max(self.width, cols * 200),    # Adjust width based on columns
             showlegend=False
         )
         
-        fig.show()
+        return fig
     
     def animate_algorithm(self, steps: List[AlgorithmStep], data: List[Number],
                          title: str = "Algorithm Animation") -> None:
@@ -191,36 +221,37 @@ class PlotlyVisualizer:
     
     def plot_performance_comparison(self, algorithms: List[str], 
                                   times: List[float], comparisons: List[int],
-                                  title: str = "Performance Comparison") -> None:
-        """Create performance comparison charts.
+                                  title: str = "Performance Comparison") -> go.Figure:
+        """Create performance comparison charts showing all algorithms on the same chart.
         
         Args:
             algorithms: List of algorithm names
             times: Execution times for each algorithm
             comparisons: Number of comparisons for each algorithm
             title: Title for the charts
+            
+        Returns:
+            Plotly Figure object for Streamlit display
         """
-        # Create subplots
-        fig = make_subplots(
-            rows=1, cols=2,
-            subplot_titles=("Execution Time", "Number of Comparisons"),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}]]
-        )
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
         
-        # Execution time chart
+        # Add execution time bars (primary y-axis)
         fig.add_trace(
             go.Bar(
                 x=algorithms,
                 y=times,
-                name="Time (s)",
+                name="Execution Time (s)",
                 marker_color='skyblue',
-                text=[f'{t:.4f}' for t in times],
-                textposition='outside'
+                text=[f'{t:.4f}s' for t in times],
+                textposition='outside',
+                yaxis='y',
+                offsetgroup=1
             ),
-            row=1, col=1
+            secondary_y=False,
         )
         
-        # Comparisons chart
+        # Add comparisons bars (secondary y-axis)
         fig.add_trace(
             go.Bar(
                 x=algorithms,
@@ -228,19 +259,37 @@ class PlotlyVisualizer:
                 name="Comparisons",
                 marker_color='lightcoral',
                 text=[str(c) for c in comparisons],
-                textposition='outside'
+                textposition='outside',
+                yaxis='y2',
+                offsetgroup=2
             ),
-            row=1, col=2
+            secondary_y=True,
         )
         
+        # Set x-axis title
+        fig.update_xaxes(title_text="Algorithms")
+        
+        # Set y-axes titles
+        fig.update_yaxes(title_text="Execution Time (seconds)", title_font_color="steelblue", secondary_y=False)
+        fig.update_yaxes(title_text="Number of Comparisons", title_font_color="darkred", secondary_y=True)
+        
+        # Update layout
         fig.update_layout(
             title=title,
             height=self.height,
             width=self.width,
-            showlegend=False
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            barmode='group'
         )
         
-        fig.show()
+        return fig
     
     def _select_key_steps(self, steps: List[AlgorithmStep], num_steps: int) -> List[int]:
         """Select key steps to display from all steps.
@@ -261,14 +310,138 @@ class PlotlyVisualizer:
         
         indices = [0]
         
-        # Select evenly spaced steps in between
+        # For better distribution, use more sophisticated selection
         if num_steps > 2:
-            step_size = (len(steps) - 2) / (num_steps - 2)
-            for i in range(1, num_steps - 1):
-                idx = int(1 + (i - 1) * step_size)
-                indices.append(idx)
+            # Distribute remaining steps evenly across the timeline
+            remaining_slots = num_steps - 2  # Excluding first and last
+            step_size = (len(steps) - 2) / remaining_slots
+            
+            for i in range(remaining_slots):
+                idx = int(1 + i * step_size)
+                # Avoid duplicates
+                if idx not in indices and idx < len(steps) - 1:
+                    indices.append(idx)
         
         # Always include the last step
-        indices.append(len(steps) - 1)
+        if len(steps) - 1 not in indices:
+            indices.append(len(steps) - 1)
         
-        return indices
+        return sorted(indices)
+    
+    def plot_performance_analysis(self, df) -> Optional[go.Figure]:
+        """Create unified performance analysis charts.
+        
+        Args:
+            df: DataFrame with performance analysis results
+            
+        Returns:
+            Plotly Figure object for Streamlit display, or None if error
+        """
+        try:
+            import pandas as pd
+            
+            # Create subplots with 2x2 layout
+            fig = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=(
+                    'Execution Time by Data Size',
+                    'Comparisons by Data Size', 
+                    'Swaps by Data Size',
+                    'Performance by Data Type'
+                ),
+                specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                       [{"secondary_y": False}, {"secondary_y": False}]]
+            )
+            
+            # Define colors for algorithms
+            colors = px.colors.qualitative.Set1
+            
+            # 1. Execution Time by Data Size
+            pivot_time = df.pivot_table(values='Execution Time', index='Data Size', columns='Algorithm')
+            for i, algorithm in enumerate(pivot_time.columns):
+                fig.add_trace(
+                    go.Scatter(
+                        x=pivot_time.index,
+                        y=pivot_time[algorithm],
+                        mode='lines+markers',
+                        name=f'{algorithm} (Time)',
+                        line=dict(color=colors[i % len(colors)]),
+                        marker=dict(symbol='circle'),
+                        showlegend=(i == 0)  # Only show legend for first algorithm group
+                    ),
+                    row=1, col=1
+                )
+            
+            # 2. Comparisons by Data Size
+            pivot_comparisons = df.pivot_table(values='Comparisons', index='Data Size', columns='Algorithm')
+            for i, algorithm in enumerate(pivot_comparisons.columns):
+                fig.add_trace(
+                    go.Scatter(
+                        x=pivot_comparisons.index,
+                        y=pivot_comparisons[algorithm],
+                        mode='lines+markers',
+                        name=f'{algorithm} (Comparisons)',
+                        line=dict(color=colors[i % len(colors)]),
+                        marker=dict(symbol='square'),
+                        showlegend=False
+                    ),
+                    row=1, col=2
+                )
+            
+            # 3. Swaps by Data Size
+            pivot_swaps = df.pivot_table(values='Swaps', index='Data Size', columns='Algorithm')
+            for i, algorithm in enumerate(pivot_swaps.columns):
+                fig.add_trace(
+                    go.Scatter(
+                        x=pivot_swaps.index,
+                        y=pivot_swaps[algorithm],
+                        mode='lines+markers',
+                        name=f'{algorithm} (Swaps)',
+                        line=dict(color=colors[i % len(colors)]),
+                        marker=dict(symbol='triangle-up'),
+                        showlegend=False
+                    ),
+                    row=2, col=1
+                )
+            
+            # 4. Performance by Data Type (average across all sizes)
+            avg_by_type = df.groupby(['Algorithm', 'Data Type'])['Execution Time'].mean().unstack()
+            
+            # Create grouped bar chart for data types
+            for i, data_type in enumerate(avg_by_type.columns):
+                fig.add_trace(
+                    go.Bar(
+                        x=avg_by_type.index,
+                        y=avg_by_type[data_type],
+                        name=data_type,
+                        showlegend=True
+                    ),
+                    row=2, col=2
+                )
+            
+            # Update layout
+            fig.update_layout(
+                title_text="Performance Analysis - All Algorithms",
+                title_font_size=16,
+                height=800,
+                showlegend=True
+            )
+            
+            # Update axes labels
+            fig.update_xaxes(title_text="Data Size", row=1, col=1)
+            fig.update_yaxes(title_text="Execution Time (s)", row=1, col=1)
+            
+            fig.update_xaxes(title_text="Data Size", row=1, col=2)
+            fig.update_yaxes(title_text="Comparisons", row=1, col=2)
+            
+            fig.update_xaxes(title_text="Data Size", row=2, col=1)
+            fig.update_yaxes(title_text="Swaps", row=2, col=1)
+            
+            fig.update_xaxes(title_text="Algorithm", row=2, col=2)
+            fig.update_yaxes(title_text="Avg Execution Time (s)", row=2, col=2)
+            
+            return fig
+            
+        except Exception as e:
+            print(f"Error creating performance analysis charts: {e}")
+            return None

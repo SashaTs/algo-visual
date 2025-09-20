@@ -512,6 +512,9 @@ class StreamlitDashboard:
         if backend == 'text':
             # Already shown in steps
             st.info("Text visualization is shown in the steps above")
+        elif backend == 'animated':
+            # Animated visualization is handled separately
+            st.info("Animated visualization is shown above")
         else:
             try:
                 viz = create_visualizer(backend)
@@ -520,7 +523,14 @@ class StreamlitDashboard:
                 
                 if hasattr(viz, 'visualize_steps') and callable(getattr(viz, 'visualize_steps', None)):
                     # Type narrowing: we know viz has visualize_steps method
-                    getattr(viz, 'visualize_steps')(steps, data, f"{algorithm_name} Visualization")
+                    fig = getattr(viz, 'visualize_steps')(steps, data, f"{algorithm_name} Visualization")
+                    if fig is not None:
+                        if backend == 'matplotlib':
+                            st.pyplot(fig)
+                        elif backend == 'plotly':
+                            st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error(f"Failed to create {backend} visualization")
                 else:
                     # Fallback for visualizers that don't support visualize_steps
                     st.text("Step-by-step visualization:")
@@ -544,12 +554,25 @@ class StreamlitDashboard:
         
         backend = st.session_state.get('visualization_backend', 'text')
         
-        if backend != 'text':
+        if backend == 'text':
+            # Text doesn't support performance comparison charts
+            pass
+        elif backend == 'animated':
+            # Animated backend doesn't support performance comparison charts
+            st.info("Performance comparison charts not available for animated backend")
+        else:
             try:
                 viz = create_visualizer(backend)
                 if hasattr(viz, 'plot_performance_comparison') and callable(getattr(viz, 'plot_performance_comparison', None)):
                     # Type narrowing: we know viz has plot_performance_comparison method
-                    getattr(viz, 'plot_performance_comparison')(algorithms, times, comparisons)
+                    fig = getattr(viz, 'plot_performance_comparison')(algorithms, times, comparisons)
+                    if fig is not None:
+                        if backend == 'matplotlib':
+                            st.pyplot(fig)
+                        elif backend == 'plotly':
+                            st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error(f"Failed to create {backend} performance charts")
                 else:
                     st.info(f"Performance comparison charts not available for {backend} backend")
             except Exception as e:
@@ -570,11 +593,48 @@ class StreamlitDashboard:
         """Render performance analysis charts."""
         st.subheader("📈 Performance Charts")
         
-        # Time complexity chart
-        st.write("**Execution Time by Data Size**")
-        for algorithm in df['Algorithm'].unique():
-            alg_data = df[df['Algorithm'] == algorithm]
-            st.line_chart(alg_data.set_index('Data Size')['Execution Time'])
+        backend = st.session_state.get('visualization_backend', 'text')
+        
+        if backend == 'text':
+            # Text backend - show data tables
+            st.write("**Execution Time by Data Size**")
+            pivot_time = df.pivot_table(values='Execution Time', index='Data Size', columns='Algorithm')
+            st.dataframe(pivot_time)
+            
+            st.write("**Comparisons by Data Size**")
+            pivot_comparisons = df.pivot_table(values='Comparisons', index='Data Size', columns='Algorithm')
+            st.dataframe(pivot_comparisons)
+            
+        elif backend == 'animated':
+            # Animated backend doesn't support performance analysis charts
+            st.info("Performance analysis charts not available for animated backend")
+            
+        else:
+            try:
+                viz = create_visualizer(backend)
+                if hasattr(viz, 'plot_performance_analysis') and callable(getattr(viz, 'plot_performance_analysis', None)):
+                    # Use dedicated performance analysis method if available
+                    fig = getattr(viz, 'plot_performance_analysis')(df)
+                    if fig is not None:
+                        if backend == 'matplotlib':
+                            st.pyplot(fig)
+                        elif backend == 'plotly':
+                            st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.error(f"Failed to create {backend} performance analysis charts")
+                else:
+                    st.info(f"Performance analysis charts not available for {backend} backend")
+            except Exception as e:
+                st.error(f"Error creating {backend} charts: {e}")
+        
+        # Fallback to streamlit charts - unified view
+        st.write("**Execution Time by Data Size (All Algorithms)**")
+        pivot_time = df.pivot_table(values='Execution Time', index='Data Size', columns='Algorithm')
+        st.line_chart(pivot_time)
+        
+        st.write("**Comparisons by Data Size (All Algorithms)**")
+        pivot_comparisons = df.pivot_table(values='Comparisons', index='Data Size', columns='Algorithm')
+        st.line_chart(pivot_comparisons)
 
 
 def main():
