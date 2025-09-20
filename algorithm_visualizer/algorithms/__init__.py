@@ -379,12 +379,299 @@ class PriorityQueueSortVisualizer(AlgorithmVisualizer):
             'description': 'Uses a priority queue (heap) to extract elements in sorted order'
         }
 
+class BinarySearchVisualizer(AlgorithmVisualizer):
+    """Visualizer for Binary Search algorithm."""
+    
+    def __init__(self, name: str = "Binary Search", data: Optional[Sequence[Union[int, float]]] = None):
+        super().__init__(name, data or [])
+        self.target = None
+        
+    def search(self, target: Union[int, float]) -> int:
+        """Execute binary search with step tracking."""
+        import time
+        
+        if not self.current_data:
+            return -1
+        
+        self.target = target
+        self._start_time = time.time()
+        
+        # Ensure data is sorted first
+        sorted_data = sorted(self.current_data)
+        self.current_data = sorted_data
+        
+        self.add_step(f"Starting Binary Search for target: {target}", 
+                      self.current_data.copy(), 
+                      highlighted_indices=list(range(len(self.current_data))))
+        
+        result = self._binary_search_recursive(sorted_data, target, 0, len(sorted_data) - 1)
+        
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
+        
+        if result != -1:
+            self.add_step(f"Target {target} found at index {result}!", 
+                          self.current_data.copy(), 
+                          highlighted_indices=[result])
+        else:
+            self.add_step(f"Target {target} not found in array", 
+                          self.current_data.copy())
+        
+        return result
+    
+    def _binary_search_recursive(self, arr: List[Number], target: Union[int, float], 
+                                left: int, right: int) -> int:
+        """Recursive binary search implementation with visualization."""
+        if left > right:
+            return -1
+        
+        mid = (left + right) // 2
+        self.metrics.comparisons += 1
+        
+        # Show current search range
+        self.add_step(f"Searching in range [{left}, {right}], checking middle element at index {mid}", 
+                      arr.copy(), 
+                      highlighted_indices=[mid],
+                      comparison_indices=list(range(left, right + 1)))
+        
+        if arr[mid] == target:
+            self.add_step(f"Found target {target} at index {mid}!", 
+                          arr.copy(), 
+                          highlighted_indices=[mid])
+            return mid
+        elif arr[mid] > target:
+            self.add_step(f"Target {target} < {arr[mid]}, searching left half", 
+                          arr.copy(), 
+                          highlighted_indices=[mid],
+                          comparison_indices=list(range(left, mid)))
+            return self._binary_search_recursive(arr, target, left, mid - 1)
+        else:
+            self.add_step(f"Target {target} > {arr[mid]}, searching right half", 
+                          arr.copy(), 
+                          highlighted_indices=[mid],
+                          comparison_indices=list(range(mid + 1, right + 1)))
+            return self._binary_search_recursive(arr, target, mid + 1, right)
+    
+    def sort(self) -> List[Number]:
+        """For compatibility - binary search doesn't sort but searches."""
+        if self.target is not None:
+            self.search(self.target)
+        else:
+            # If no target is set, search for a random element from the data
+            if self.current_data:
+                import random
+                self.target = random.choice(self.current_data)
+                self.search(self.target)
+        return self.current_data
+    
+    def get_algorithm_info(self) -> Dict[str, str]:
+        """Return binary search complexity information."""
+        return {
+            'time_complexity': 'O(log n)',
+            'space_complexity': 'O(log n) recursive, O(1) iterative',
+            'stability': 'N/A (search algorithm)',
+            'description': 'Efficient search algorithm that works on sorted arrays by repeatedly dividing the search interval in half'
+        }
+
+class BubbleSortVisualizer(AlgorithmVisualizer):
+    """Visualizer for Bubble Sort algorithm."""
+    
+    def __init__(self, name: str = "Bubble Sort", data: Optional[Sequence[Union[int, float]]] = None):
+        super().__init__(name, data or [])
+        
+    def sort(self) -> List[Number]:
+        """Execute bubble sort with step tracking."""
+        import time
+        
+        if not self.current_data:
+            return []
+        
+        self._start_time = time.time()
+        
+        arr = self.current_data.copy()
+        n = len(arr)
+        
+        self.add_step("Starting Bubble Sort", arr.copy(), 
+                      highlighted_indices=list(range(len(arr))))
+        
+        for i in range(n):
+            swapped = False
+            self.add_step(f"Pass {i + 1}: Bubbling largest elements to the end", 
+                          arr.copy(), 
+                          highlighted_indices=list(range(n - i)))
+            
+            for j in range(0, n - i - 1):
+                self.metrics.comparisons += 1
+                
+                self.add_step(f"Comparing elements at indices {j} and {j + 1}: {arr[j]} vs {arr[j + 1]}", 
+                              arr.copy(), 
+                              comparison_indices=[j, j + 1])
+                
+                if arr[j] > arr[j + 1]:
+                    # Swap elements
+                    arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                    swapped = True
+                    self.metrics.swaps += 1
+                    
+                    self.add_step(f"Swapped {arr[j + 1]} and {arr[j]} - bubble larger element up", 
+                                  arr.copy(), 
+                                  swapped_indices=[j, j + 1])
+                else:
+                    self.add_step(f"No swap needed: {arr[j]} <= {arr[j + 1]}", 
+                                  arr.copy(), 
+                                  highlighted_indices=[j, j + 1])
+            
+            # Show completion of this pass
+            if not swapped:
+                self.add_step(f"No swaps in pass {i + 1} - array is sorted!", 
+                              arr.copy(), 
+                              highlighted_indices=list(range(len(arr))))
+                break
+            else:
+                self.add_step(f"Pass {i + 1} complete - element {arr[n - i - 1]} is in final position", 
+                              arr.copy(), 
+                              highlighted_indices=[n - i - 1])
+        
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
+        
+        self.add_step("Bubble Sort Complete", arr, 
+                      highlighted_indices=list(range(len(arr))))
+        
+        return arr
+    
+    def get_algorithm_info(self) -> Dict[str, str]:
+        """Return bubble sort complexity information."""
+        return {
+            'time_complexity': 'O(n²) worst/average, O(n) best',
+            'space_complexity': 'O(1)',
+            'stability': 'Stable',
+            'description': 'Simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order'
+        }
+
+class BreadthFirstSearchVisualizer(AlgorithmVisualizer):
+    """Visualizer for Breadth-First Search (BFS) on a graph represented as an adjacency list."""
+    
+    def __init__(self, name: str = "Breadth-First Search", data: Optional[Sequence[Union[int, float]]] = None):
+        super().__init__(name, data or [])
+        self.graph = {}
+        self.start_node = None
+        self.target_node = None
+        
+    def create_sample_graph(self):
+        """Create a sample graph for BFS demonstration."""
+        # Create a simple graph: 0-1-2-3 with some cross connections
+        self.graph = {
+            0: [1, 2],
+            1: [0, 3, 4],
+            2: [0, 5],
+            3: [1],
+            4: [1, 5],
+            5: [2, 4]
+        }
+        # For visualization, we'll use the node numbers as "data"
+        self.current_data: List[Number] = [i for i in range(6)]  # Nodes 0 through 5
+        
+    def search(self, start: int, target: Optional[int] = None) -> List[int]:
+        """Execute BFS with step tracking."""
+        import time
+        from collections import deque
+        
+        if not self.graph:
+            self.create_sample_graph()
+        
+        self.start_node = start
+        self.target_node = target
+        
+        self._start_time = time.time()
+        
+        visited = set()
+        queue = deque([start])
+        path = []
+        
+        self.add_step(f"Starting BFS from node {start}", 
+                      self.current_data.copy(), 
+                      highlighted_indices=[start])
+        
+        self.add_step(f"Initialize queue with start node {start}", 
+                      self.current_data.copy(), 
+                      highlighted_indices=[start])
+        
+        while queue:
+            current = queue.popleft()
+            
+            if current in visited:
+                continue
+                
+            visited.add(current)
+            path.append(current)
+            self.metrics.comparisons += 1
+            
+            self.add_step(f"Visiting node {current}, adding to path", 
+                          self.current_data.copy(), 
+                          highlighted_indices=[current],
+                          comparison_indices=list(visited))
+            
+            if target is not None and current == target:
+                self.add_step(f"Target node {target} found!", 
+                              self.current_data.copy(), 
+                              highlighted_indices=[current])
+                break
+            
+            # Add unvisited neighbors to queue
+            neighbors = self.graph.get(current, [])
+            new_neighbors = [n for n in neighbors if n not in visited and n not in queue]
+            
+            if new_neighbors:
+                queue.extend(new_neighbors)
+                self.add_step(f"Adding neighbors {new_neighbors} of node {current} to queue", 
+                              self.current_data.copy(), 
+                              highlighted_indices=[current],
+                              comparison_indices=new_neighbors)
+            
+            self.add_step(f"Queue now contains: {list(queue)}", 
+                          self.current_data.copy(), 
+                          highlighted_indices=list(queue),
+                          comparison_indices=list(visited))
+        
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
+        
+        self.add_step(f"BFS complete. Visited path: {path}", 
+                      self.current_data.copy(), 
+                      highlighted_indices=path)
+        
+        return path
+    
+    def sort(self) -> List[Number]:
+        """For compatibility - BFS doesn't sort but traverses."""
+        if self.start_node is not None:
+            if self.target_node is not None:
+                result = self.search(self.start_node, self.target_node)
+            else:
+                result = self.search(self.start_node)
+        else:
+            result = self.search(0)  # Default start from node 0
+        return self.current_data
+    
+    def get_algorithm_info(self) -> Dict[str, str]:
+        """Return BFS complexity information."""
+        return {
+            'time_complexity': 'O(V + E) where V is vertices and E is edges',
+            'space_complexity': 'O(V) for the queue',
+            'stability': 'N/A (search algorithm)',
+            'description': 'Graph traversal algorithm that explores neighbors level by level, guaranteeing shortest path in unweighted graphs'
+        }
+
 # Registry of available algorithms
 AVAILABLE_ALGORITHMS: Dict[str, Type[AlgorithmVisualizer]] = {
     'merge_sort': MergeSortVisualizer,
     'quick_sort': QuickSortVisualizer,
     'selection_sort': SelectionSortVisualizer,
-    'priority_queue_sort': PriorityQueueSortVisualizer
+    'priority_queue_sort': PriorityQueueSortVisualizer,
+    'binary_search': BinarySearchVisualizer,
+    'bubble_sort': BubbleSortVisualizer,
+    'breadth_first_search': BreadthFirstSearchVisualizer
 }
 
 def create_algorithm_visualizer(algorithm_name: str, data: Sequence[Union[int, float]]) -> AlgorithmVisualizer:
