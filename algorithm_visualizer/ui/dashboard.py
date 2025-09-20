@@ -21,6 +21,7 @@ try:
     from ..visualizers import get_available_backends, create_visualizer, MATPLOTLIB_AVAILABLE, PLOTLY_AVAILABLE
     from ..core.base import Number
     from .animations import create_modern_visualization, StreamlitAnimationManager
+    from .code_animation import create_code_animation
 except ImportError:
     # Fallback to absolute imports when run directly
     from algorithm_visualizer.algorithms import create_algorithm_visualizer, get_available_algorithms, get_algorithm_info
@@ -28,6 +29,8 @@ except ImportError:
     from algorithm_visualizer.utils.data_io import read_numbers, export_metrics, save_dataset, generate_test_data
     from algorithm_visualizer.visualizers import get_available_backends, create_visualizer, MATPLOTLIB_AVAILABLE, PLOTLY_AVAILABLE
     from algorithm_visualizer.core.base import Number
+    from algorithm_visualizer.ui.animations import create_modern_visualization, StreamlitAnimationManager
+    from algorithm_visualizer.ui.code_animation import create_code_animation
     from algorithm_visualizer.ui.animations import create_modern_visualization, StreamlitAnimationManager
 
 
@@ -150,14 +153,15 @@ class StreamlitDashboard:
         st.sidebar.subheader("🎨 Visualization")
         
         available_backends = get_available_backends()
-        # Add modern animation option
-        available_backends.append("animated")
+        # Add modern animation options
+        available_backends.extend(["animated", "code"])
         
         backend_options = {
             "text": "📝 Text",
             "matplotlib": "📊 Matplotlib", 
             "plotly": "📈 Plotly",
-            "animated": "🎬 Modern Animated"
+            "animated": "🎬 Modern Animated",
+            "code": "💻 Code Animation"
         }
         
         # Filter to only show available options
@@ -239,14 +243,17 @@ class StreamlitDashboard:
             if show_metrics:
                 self.display_metrics(visualizer, selected_algorithm)
             
-            # Show steps (only if not using animated visualization)
-            if show_steps and st.session_state.visualization_backend != 'animated':
+            # Show steps (only if not using animated or code visualization)
+            if show_steps and st.session_state.visualization_backend not in ['animated', 'code']:
                 self.display_algorithm_steps(visualizer, selected_algorithm)
             
             # Visualization
             if st.session_state.visualization_backend == 'animated':
                 st.subheader("🎬 Modern Animation")
                 create_modern_visualization(visualizer, selected_algorithm)
+            elif st.session_state.visualization_backend == 'code':
+                st.subheader("💻 Code Animation")
+                create_code_animation(visualizer, selected_algorithm)
             elif st.session_state.visualization_backend != 'text':
                 self.render_visualization(visualizer, selected_algorithm)
     
@@ -474,7 +481,7 @@ class StreamlitDashboard:
             })
         
         df = pd.DataFrame(comparison_data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         # Best algorithm
         best = comparator.get_best_algorithm()
@@ -515,6 +522,9 @@ class StreamlitDashboard:
         elif backend == 'animated':
             # Animated visualization is handled separately
             st.info("Animated visualization is shown above")
+        elif backend == 'code':
+            # Code animation is handled separately
+            st.info("Code animation is shown above")
         else:
             try:
                 viz = create_visualizer(backend)
@@ -528,7 +538,7 @@ class StreamlitDashboard:
                         if backend == 'matplotlib':
                             st.pyplot(fig)
                         elif backend == 'plotly':
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     else:
                         st.error(f"Failed to create {backend} visualization")
                 else:
@@ -560,6 +570,9 @@ class StreamlitDashboard:
         elif backend == 'animated':
             # Animated backend doesn't support performance comparison charts
             st.info("Performance comparison charts not available for animated backend")
+        elif backend == 'code':
+            # Code backend doesn't support performance comparison charts
+            st.info("Performance comparison charts not available for code animation backend")
         else:
             try:
                 viz = create_visualizer(backend)
@@ -570,7 +583,7 @@ class StreamlitDashboard:
                         if backend == 'matplotlib':
                             st.pyplot(fig)
                         elif backend == 'plotly':
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     else:
                         st.error(f"Failed to create {backend} performance charts")
                 else:
@@ -609,6 +622,10 @@ class StreamlitDashboard:
             # Animated backend doesn't support performance analysis charts
             st.info("Performance analysis charts not available for animated backend")
             
+        elif backend == 'code':
+            # Code backend doesn't support performance analysis charts
+            st.info("Performance analysis charts not available for code animation backend")
+            
         else:
             try:
                 viz = create_visualizer(backend)
@@ -619,7 +636,7 @@ class StreamlitDashboard:
                         if backend == 'matplotlib':
                             st.pyplot(fig)
                         elif backend == 'plotly':
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     else:
                         st.error(f"Failed to create {backend} performance analysis charts")
                 else:
