@@ -15,7 +15,7 @@ if parent_dir not in sys.path:
 
 # Try relative imports first (when run as module), fall back to absolute imports
 try:
-    from ..algorithms import create_algorithm_visualizer, get_available_algorithms
+    from ..algorithms import create_algorithm_visualizer, get_available_algorithms, get_algorithm_info
     from ..core.comparator import AlgorithmComparator
     from ..utils.data_io import read_numbers, export_metrics, save_dataset, generate_test_data
     from ..visualizers import get_available_backends, create_visualizer, MATPLOTLIB_AVAILABLE, PLOTLY_AVAILABLE
@@ -23,7 +23,7 @@ try:
     from .animations import create_modern_visualization, StreamlitAnimationManager
 except ImportError:
     # Fallback to absolute imports when run directly
-    from algorithm_visualizer.algorithms import create_algorithm_visualizer, get_available_algorithms
+    from algorithm_visualizer.algorithms import create_algorithm_visualizer, get_available_algorithms, get_algorithm_info
     from algorithm_visualizer.core.comparator import AlgorithmComparator
     from algorithm_visualizer.utils.data_io import read_numbers, export_metrics, save_dataset, generate_test_data
     from algorithm_visualizer.visualizers import get_available_backends, create_visualizer, MATPLOTLIB_AVAILABLE, PLOTLY_AVAILABLE
@@ -391,7 +391,6 @@ class StreamlitDashboard:
             with st.expander(f"📖 {algorithm}"):
                 try:
                     # Get algorithm info without creating full instance
-                    from ..algorithms import get_algorithm_info
                     info = get_algorithm_info(algorithm)
                     
                     col1, col2 = st.columns(2)
