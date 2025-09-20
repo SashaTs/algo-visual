@@ -59,6 +59,50 @@ class MatplotlibVisualizer:
             print(f"Cannot create plots: matplotlib not available")
             return None
         
+        # Detect algorithm type and use specialized visualization if needed
+        algorithm_type = self._detect_algorithm_type(steps, title)
+        
+        if algorithm_type == 'binary_search':
+            return self._visualize_binary_search(steps, data, title)
+        elif algorithm_type == 'breadth_first_search':
+            return self._visualize_bfs(steps, data, title)
+        else:
+            # Use standard array-based visualization for sorting algorithms
+            return self._visualize_sorting_algorithm(steps, data, title)
+    
+    def _detect_algorithm_type(self, steps: List[AlgorithmStep], title: str) -> str:
+        """Detect the algorithm type from steps and title."""
+        title_lower = title.lower()
+        
+        if 'binary search' in title_lower or any('binary search' in step.description.lower() for step in steps):
+            return 'binary_search'
+        elif 'bfs' in title_lower or 'breadth' in title_lower or any('bfs' in step.description.lower() for step in steps):
+            return 'breadth_first_search'
+        else:
+            return 'sorting'
+    
+    def _visualize_binary_search(self, steps: List[AlgorithmStep], data: List[Number], title: str) -> Optional['Figure']:
+        """Create specialized visualization for binary search."""
+        try:
+            from .specialized_visualizers import BinarySearchVisualizer
+            visualizer = BinarySearchVisualizer()
+            return visualizer.create_matplotlib_visualization(steps, data, title)
+        except ImportError as e:
+            print(f"Could not import specialized visualizer: {e}")
+            return self._visualize_sorting_algorithm(steps, data, title)
+    
+    def _visualize_bfs(self, steps: List[AlgorithmStep], data: List[Number], title: str) -> Optional['Figure']:
+        """Create specialized visualization for BFS."""
+        try:
+            from .specialized_visualizers import BFSGraphVisualizer
+            visualizer = BFSGraphVisualizer()
+            return visualizer.create_matplotlib_visualization(steps, data, title)
+        except ImportError as e:
+            print(f"Could not import specialized visualizer: {e}")
+            return self._visualize_sorting_algorithm(steps, data, title)
+    
+    def _visualize_sorting_algorithm(self, steps: List[AlgorithmStep], data: List[Number], title: str) -> Optional['Figure']:
+        """Create standard array-based visualization for sorting algorithms."""
         # Show all steps up to 100, then truncate
         total_steps = len(steps)
         max_steps = 100
@@ -83,6 +127,9 @@ class MatplotlibVisualizer:
         fig_width = max(self.width, cols * 3)
         fig_height = max(self.height, rows * 2.5)
         
+        if plt is None:
+            return None
+            
         self.fig, axes = plt.subplots(rows, cols, figsize=(fig_width, fig_height))
         if rows == 1 and cols == 1:
             axes = [axes]
