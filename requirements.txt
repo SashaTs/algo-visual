@@ -1,0 +1,38 @@
+# Algorithm Visualization Framework Requirements
+
+# Core dependencies (required for basic functionality)
+# Note: The framework is designed to work with Python standard library only
+
+# Optional dependencies for enhanced features
+
+# Data Science and Visualization
+matplotlib>=3.5.0          # Static and animated visualizations
+numpy>=1.21.0              # Mathematical operations and array handling
+pandas>=1.3.0              # Data analysis and CSV export
+
+# Interactive Web Dashboard
+streamlit>=1.25.0          # Web application framework
+plotly>=5.15.0             # Interactive visualizations
+
+# Development and Testing
+pytest>=7.0.0              # Testing framework
+pytest-cov>=4.0.0          # Coverage reporting
+black>=22.0.0              # Code formatting
+mypy>=0.991                # Type checking
+
+# Documentation
+sphinx>=5.0.0              # Documentation generation
+sphinx-rtd-theme>=1.0.0    # Read the Docs theme
+
+# Performance Analysis
+memory-profiler>=0.60.0    # Memory usage profiling
+
+# Export and Data Processing
+pillow>=9.0.0              # Image processing for matplotlib
+openpyxl>=3.0.0            # Excel file export
+
+# Installation notes:
+# Minimal installation: No additional packages required - framework works with Python stdlib
+# Basic visualization: pip install matplotlib numpy
+# Full web dashboard: pip install streamlit plotly pandas matplotlib numpy  
+# Complete development environment: pip install -r requirements.txt
