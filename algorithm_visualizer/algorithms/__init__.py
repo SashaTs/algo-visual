@@ -147,7 +147,10 @@ class QuickSortVisualizer(AlgorithmVisualizer):
         """Execute quick sort with step tracking."""
         if not self.current_data:
             return []
-            
+        
+        import time
+        self._start_time = time.time()
+        
         self.add_step("Starting Quick Sort", self.current_data.copy(), 
                       highlighted_indices=list(range(len(self.current_data))))
         
@@ -155,6 +158,10 @@ class QuickSortVisualizer(AlgorithmVisualizer):
         
         self.add_step("Quick Sort Complete", self.current_data.copy(), 
                       highlighted_indices=list(range(len(self.current_data))))
+        
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
+        
         return self.current_data.copy()
     
     def _quick_sort_recursive(self, arr: List[Number], low: int, high: int):
@@ -245,6 +252,9 @@ class SelectionSortVisualizer(AlgorithmVisualizer):
         """Execute selection sort with step tracking."""
         if not self.current_data:
             return []
+        
+        import time
+        self._start_time = time.time()
             
         # Work with a copy of the data for in-place sorting visualization
         arr = self.current_data.copy()
@@ -296,6 +306,9 @@ class SelectionSortVisualizer(AlgorithmVisualizer):
         self.add_step("Selection Sort Complete", arr.copy(), 
                       highlighted_indices=list(range(len(arr))))
         
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
+        
         return arr
     
     def get_algorithm_info(self) -> Dict[str, str]:
@@ -317,9 +330,12 @@ class PriorityQueueSortVisualizer(AlgorithmVisualizer):
         """Execute priority queue sort with step tracking."""
         if not self.current_data:
             return []
-            
+        
+        import time
         import heapq
         
+        self._start_time = time.time()
+            
         # Work with a copy of the original data
         arr = self.current_data.copy()
         
@@ -348,6 +364,9 @@ class PriorityQueueSortVisualizer(AlgorithmVisualizer):
         
         self.add_step("Priority Queue Sort Complete", result, 
                       highlighted_indices=list(range(len(result))))
+        
+        self._end_time = time.time()
+        self.metrics.execution_time = self._end_time - self._start_time
         
         return result
     
